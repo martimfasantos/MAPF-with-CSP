@@ -1,10 +1,7 @@
-from minizinc import Instance, Model, Solver
+import sys
 import pymzn
 import subprocess
 from subprocess import check_output
-
-START = 0
-GOAL = 1
 
 
 def print_output(output):
@@ -20,110 +17,117 @@ def print_output(output):
         print()
 
 
-def main(graph, scen):
-    with open(graph, "r") as input_graph:
+def skip_comments(file):
+    line = file.readline()
+    while line and line[0] == "#":
+        line = file.readline()
 
-        n_vertices = int(input_graph.readline())
-        n_edges = int(input_graph.readline())
+    return line
 
-        edges = input_graph.read()
-        edges = edges.split("\n")[:-1]
-        # parse edges to lists of two integers
-        edges = [edge.split() for edge in edges]
-        edges = [[int(edge[j]) for j in range(2)] for edge in edges]
+
+def read_graph(graph):
+    with open(graph) as input_graph:
+        n_vertices = int(skip_comments(input_graph))
+        n_edges = int(skip_comments(input_graph))
+
         # define adjs where free_adjs[i] is a set of the free adjacencies for the vertex i+1
         adjs = [set() for _ in range(n_vertices)]
-        for edge in edges:
+
+        line = skip_comments(input_graph)
+        while line:
+            edge = [int(x) for x in line.strip().split()]
+
             adjs[edge[0]-1].add(edge[1])
             adjs[edge[1]-1].add(edge[0])
 
-        input_graph.close()
+            line = skip_comments(input_graph)
 
-    print(n_vertices)
-    print(n_edges)
-    print(edges)
-    print(adjs)
+    return n_vertices, n_edges, adjs
 
-    with open(scen, "r") as input_scen:
 
-        n_agents = int(input_scen.readline())
+def read_scen(scen):
+    with open(scen) as input_scen:
+        n_agents = int(skip_comments(input_scen))
 
-        positions = input_scen.read()
-        positions = positions.split("\n")[:-1]
+        # handle START
+        line = skip_comments(input_scen)
 
-        # remove START: and GOAL:
-        positions = positions[1:n_agents+1] + positions[n_agents+2:]
+        start_pos = [None] * n_agents
+        line = skip_comments(input_scen)
+        while line and "GOAL" not in line:
+            i, a = line.strip().split()
+            start_pos[int(i) - 1] = int(a)
 
-        # parse positions to lists of two integers
-        positions = [pos.split() for pos in positions]
-        positions = [[int(pos[j]) for j in range(2)] for pos in positions]
+            line = skip_comments(input_scen)
 
-        # define start and goal vectors
-        start_pos = [None] * (n_agents+1)
-        goal_pos = [None] * (n_agents+1)
+        # handle STOP
+        line = skip_comments(input_scen)
+        goal_pos = [None] * n_agents
+        while line:
+            i, a = line.strip().split()
+            goal_pos[int(i) - 1] = int(a)
 
-        for i in range(n_agents):
-            start_pos[positions[i][0]] = positions[i][1]
-        for i in range(n_agents, len(positions)):
-            goal_pos[positions[i][0]] = positions[i][1]
+            line = skip_comments(input_scen)
 
-        print("$$$$$$")
-        print(start_pos)
-        print(goal_pos)
-        print("$$$$$$")
+        return n_agents, start_pos, goal_pos
 
-        # define agents where agents[i] is [current_pos, goal_pos] for the agent i+1
-        agents = [[] for _ in range(n_agents)]
-        for pos in positions:
-            agents[pos[0]-1].append(pos[1])
 
-        input_scen.close()
+def bfs(adjs, start, goal):
+    visited = []
+    queue = [start]
 
-    print(n_agents)
-    print(agents)
+    if start == goal:
+        return visited
 
-    # calculate min makespan using BFS
+    while queue:
+        node = queue.pop(0)
+        if node not in visited:
+            visited.append(node)
+            for adj in adjs[node-1]:
+                if adj == goal:
+                    visited.append(adj)
+                    return visited
+                if adj not in visited:
+                    queue.append(adj)
+
+
+def calc_minspan(start_pos, goal_pos, adjs):
     min_makespan = 2
-    for a in agents:
-        path_size = len(bfs(adjs, a))
+    for start, goal in zip(start_pos, goal_pos):
+        path_size = len(bfs(adjs, start, goal))
         if path_size > min_makespan:
             min_makespan = path_size
 
-    print("-------------")
-    print(min_makespan)
-    print("-------------")
+    return min_makespan
 
-    # Load minzinc model
-    #model = Model("./mapf.mzn")
 
-    # Mininc config for geocode
-    # solver = Solver.lookup("gecode")
+def main(graph, scen):
 
-    # Create an Instance of the model
-    # instance = Instance(solver, model)
+    n_vertices, n_edges, adjs = read_graph(graph)
+    # print(n_vertices)
+    # print(n_edges)
+    # print(edges)
+    # print(adjs)
 
-    # graph variables
-    #instance["n_vertices"] = n_vertices
-    #instance["n_edges"] = n_edges
-    #instance["adj"] = adjs
+    n_agents, start_pos, goal_pos = read_scen(scen)
+    # print("$$$$$$")
+    # print(start_pos)
+    # print(goal_pos)
+    # print("$$$$$$")
+    # print(n_agents)
+    # print(agents)
 
-    # agents variables
-    #instance["n_agents"] = n_agents
-    #instance["start"] = start_pos[1:]
-    #instance["goal"] = goal_pos[1:]
-
-    #instance["makespan"] = makespan
-    #result = instance.solve()
+    # calculate min makespan using BFS
+    makespan = calc_minspan(start_pos, goal_pos, adjs)
 
     data = {'n_vertices': n_vertices,
             'n_edges': n_edges,
             'adj': adjs,
             'n_agents': n_agents,
-            'start': start_pos[1:],
-            'goal': goal_pos[1:]
+            'start': start_pos,
+            'goal': goal_pos
             }
 
-    makespan = min_makespan
     output = b"UNSATISFIABLE"
     while b"UNSATISFIABLE" in output and makespan < 100:
 
@@ -132,8 +136,7 @@ def main(graph, scen):
         with open("data.dzn", "w") as _:
             pymzn.dict2dzn(data, fout='./data.dzn')
 
-        # output = check_output(["minizinc", "-c", "--solver", "Gecode", "mapf.mzn", "data.dzn", "|", "minizinc", "--ozn-file", "mapf.ozn"])
-        # print(output)
+        # ver aqui se devemos mudar o solver / o gui fez e ajudou
         sp = subprocess.Popen(['minizinc', '--solver', 'Gecode', 'mapf.mzn', 'data.dzn'],
                               stdout=subprocess.PIPE,  stderr=subprocess.PIPE)
 
@@ -144,31 +147,8 @@ def main(graph, scen):
     print_output(output)
 
 
-def bfs(adjs, agent):
-
-    global START
-    global GOAL
-
-    visited = []
-    queue = [agent[START]]
-
-    if agent[START] == agent[GOAL]:
-        return visited
-
-    while queue:
-        node = queue.pop(0)
-        if node not in visited:
-            visited.append(node)
-            for adj in adjs[node-1]:
-                if adj == agent[GOAL]:
-                    visited.append(adj)
-                    return visited
-                if adj not in visited:
-                    queue.append(adj)
-
-
 if __name__ == '__main__':
-    graph = "input_graph.txt"
-    scen = "input_scen.txt"
+    graph = sys.argv[1]
+    scen = sys.argv[2]
 
     main(graph, scen)
