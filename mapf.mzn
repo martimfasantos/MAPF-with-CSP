@@ -6,15 +6,15 @@ include "nosets.mzn";
 % -----------------------%
 
 % Graph
-int: makespan = 9;
-int: n_vertices = 5;
-int: n_edges = 4;
-array[1..n_vertices] of set of 1..n_vertices: adj = [{2}, {1, 3, 5}, {2, 4}, {3}, {2}];
+int: makespan;
+int: n_vertices;
+int: n_edges;
+array[1..n_vertices] of set of 1..n_vertices: adj;
 
 % Agents
-int: n_agents = 3;
-array[1..n_agents] of 1..n_vertices: start = [1, 2, 5];
-array[1..n_agents] of 1..n_vertices: goal = [5, 2, 1];
+int: n_agents;
+array[1..n_agents] of 1..n_vertices: start;
+array[1..n_agents] of 1..n_vertices: goal;
 
 % position of each agent in a timestamp e.g. t0 = [agent1_pos, agent2_pos, agent3_pos]
 array[1..makespan, 1..n_agents] of var 1..n_vertices: ts_pos;

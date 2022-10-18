@@ -6,7 +6,7 @@ from subprocess import check_output
 
 def print_output(output):
     output = "".join(chr(x) for x in output)
-    output = output.split("\n")[3:-3]
+    output = output.split("\n")[1:-3]
     for i, o in enumerate(output):
         o = o[3:].split(", ")
 
