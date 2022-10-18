@@ -7,8 +7,21 @@ START = 0
 GOAL = 1
 
 
-def main():
-    with open('input_graph.txt', "r") as input_graph:
+def print_output(output):
+    output = "".join(chr(x) for x in output)
+    output = output.split("\n")[3:-3]
+    for i, o in enumerate(output):
+        o = o[3:].split(", ")
+
+        print(f"i={i} ", end="")
+        for j, a in enumerate(o):
+            print(f"{j+1}:{a} ", end="")
+
+        print()
+
+
+def main(graph, scen):
+    with open(graph, "r") as input_graph:
 
         n_vertices = int(input_graph.readline())
         n_edges = int(input_graph.readline())
@@ -31,7 +44,7 @@ def main():
     print(edges)
     print(adjs)
 
-    with open('input_scen.txt', "r") as input_scen:
+    with open(scen, "r") as input_scen:
 
         n_agents = int(input_scen.readline())
 
@@ -128,19 +141,7 @@ def main():
 
         makespan += 1
 
-    output = "".join(chr(x) for x in output)
-    output = output.split("\n")[3:-3]
-
-    for i, o in enumerate(output):
-        o = o[3:].split(", ")
-
-        print(f"i={i} ", end="")
-        for j, a in enumerate(o):
-            print(f"{j+1}={a} ", end="")
-
-        print()
-
-    # TODO: PARSE solution
+    print_output(output)
 
 
 def bfs(adjs, agent):
@@ -167,4 +168,7 @@ def bfs(adjs, agent):
 
 
 if __name__ == '__main__':
-    main()
+    graph = "input_graph.txt"
+    scen = "input_scen.txt"
+
+    main(graph, scen)
