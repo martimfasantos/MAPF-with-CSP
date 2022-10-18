@@ -115,7 +115,7 @@ def main():
         with open("data.dzn", "w") as _:
             pymzn.dict2dzn(data, fout='./data.dzn')
     
-        subprocess.call(["minizinc", "-c", "--solver", "gecode", "mapf.mzn"])
+        subprocess.call(["minizinc", "-c", "--solver", "gecode", "mapf.mzn", "data.dzn"])
         # TODO: check if it satisfied, then break and print solution
         # print(result["ts_pos"])
     
