@@ -68,7 +68,7 @@ def main():
 
     result = instance.solve()
 
-    print(result["next_pos"])
+    print(result["ts_pos"])
 
 
 def bfs(adjs, agent):
