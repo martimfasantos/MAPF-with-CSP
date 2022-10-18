@@ -3,6 +3,7 @@ from minizinc import Instance, Model, Solver
 START = 0
 GOAL = 1
 
+
 def main():
     with open('input_graph.txt', "r") as input_graph:
 
@@ -20,8 +21,6 @@ def main():
             adjs[edge[0]-1].add(edge[1])
             adjs[edge[1]-1].add(edge[0])
 
-        input_graph.close()
-
     print(n_vertices)
     print(n_edges)
     print(edges)
@@ -36,7 +35,7 @@ def main():
         # remove START: and GOAL:
         positions = positions[1:n_agents+1] + positions[n_agents+2:]
         # parse positions to lists of two integers
-        positions = [pos.split() for pos in positions]        
+        positions = [pos.split() for pos in positions]
         positions = [[int(pos[j]) for j in range(2)] for pos in positions]
         # define agents where agents[i] is [current_pos, goal_pos] for the agent i+1
         agents = [[] for _ in range(n_agents)]
@@ -46,42 +45,47 @@ def main():
         # for start, _ in agents:
         #     for adj in free_adjs:
         #         adj.discard(start)
-                
-        input_scen.close()
-
-    # # Load n-Queens model from file
-    # mapf = Model("./mapf.mzn")
-    # # Find the MiniZinc solver configuration for Gecode
-    # gecode = Solver.lookup("gecode")
-    # # Create an Instance of the n-Queens model for Gecode
-    # instance = Instance(gecode, mapf)
-    # # Assign 4 to n
-    # # instance["n_vertices"] = n_vertices
-    # instance["n_agents"] = n_agents
-
-    # result = instance.solve()
-    # # Output the array q
-    # print(result["solution"])
-
     print(n_agents)
     print(agents)
 
-    print(bfs(adjs, agents[0]))
-    print(bfs(adjs, agents[1]))
-    print(bfs(adjs, agents[2]))
+    # Load minzinc model
+    model = Model("./mapf.mzn")
+
+    # Mininc config for geocode
+    solver = Solver.lookup("gecode")
+
+    # Create an Instance of the model
+    instance = Instance(solver, model)
+
+    # graph variables
+    instance["n_vertices"] = n_vertices
+    instance["n_edges"] = n_edges
+    instance["adj"] = adjs
+
+    # objective
+    instance["n_agents"] = n_agents
+    instance["agents"] = agents
+
+    result = instance.solve()
+
+    print(result["next_pos"])
+
 
 def bfs(adjs, agent):
+
+    global START
+    global GOAL
 
     visited = []
     queue = [agent[START]]
 
     if agent[START] == agent[GOAL]:
         return visited
-    
+
     while queue:
         node = queue.pop(0)
         if node not in visited:
-            visited.append(node)            
+            visited.append(node)
             for adj in adjs[node-1]:
                 if adj == agent[GOAL]:
                     visited.append(adj)
@@ -89,10 +93,11 @@ def bfs(adjs, agent):
                 if adj not in visited:
                     queue.append(adj)
 
+
 if __name__ == '__main__':
     main()
 
-#print(free_adjs)
+# print(free_adjs)
 
 # # Load n-Queens model from file
 # nqueens = Model("./nqueens.mzn")
