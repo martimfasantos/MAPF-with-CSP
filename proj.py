@@ -1,5 +1,6 @@
 from minizinc import Instance, Model, Solver
 import pymzn
+import subprocess
 
 START = 0
 GOAL = 1
@@ -79,37 +80,46 @@ def main():
     print(min_makespan)
     print("-------------")
     
-    pymzn.dict2dzn({'n_vertices': n_vertices, 
-                    'n_edges': n_edges, 
-                    'c': {1, 2, 3}, 'd': {3: 4.5, 4: 1.3}, 'e': [[1, 2], [3, 4], [5, 6]]})
-    
     # Load minzinc model
-    model = Model("./mapf.mzn")
+    #model = Model("./mapf.mzn")
 
     # Mininc config for geocode
-    solver = Solver.lookup("gecode")
+    # solver = Solver.lookup("gecode")
 
     # Create an Instance of the model
-    instance = Instance(solver, model)
+    # instance = Instance(solver, model)
+    
+    # graph variables
+    #instance["n_vertices"] = n_vertices
+    #instance["n_edges"] = n_edges
+    #instance["adj"] = adjs
+
+    # agents variables
+    #instance["n_agents"] = n_agents
+    #instance["start"] = start_pos[1:]
+    #instance["goal"] = goal_pos[1:]
+
+    #instance["makespan"] = makespan
+    #result = instance.solve()
 
     for makespan in range(min_makespan, 1000):
-        # graph variables
-        instance["n_vertices"] = n_vertices
-        instance["n_edges"] = n_edges
-        instance["adj"] = adjs
-
-        # agents variables
-        instance["n_agents"] = n_agents
-        instance["start"] = start_pos[1:]
-        instance["goal"] = goal_pos[1:]
-
-        instance["makespan"] = makespan
-        result = instance.solve()
+        
+        data ={ 'n_vertices': n_vertices, 
+                'n_edges': n_edges, 
+                'adj': adjs, 
+                'n_agents': n_agents, 
+                'start': start_pos[1:],
+                'goal': goal_pos[1:],
+                'makespan': makespan }
+        
+        with open("data.dzn", "w") as _:
+            pymzn.dict2dzn(data, fout='./data.dzn')
+    
+        subprocess.call(["minizinc", "-c", "--solver", "gecode", "mapf.mzn"])
         # TODO: check if it satisfied, then break and print solution
         # print(result["ts_pos"])
     
     # TODO: PARSE solution
-
 
 
 def bfs(adjs, agent):
