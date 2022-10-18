@@ -1,6 +1,7 @@
 from minizinc import Instance, Model, Solver
 import pymzn
 import subprocess
+from subprocess import check_output
 
 START = 0
 GOAL = 1
@@ -101,26 +102,31 @@ def main():
 
     #instance["makespan"] = makespan
     #result = instance.solve()
-
-    for makespan in range(min_makespan, 1000):
         
-        data ={ 'n_vertices': n_vertices, 
+    data = { 'n_vertices': n_vertices, 
                 'n_edges': n_edges, 
                 'adj': adjs, 
                 'n_agents': n_agents, 
                 'start': start_pos[1:],
-                'goal': goal_pos[1:],
-                'makespan': makespan }
+                'goal': goal_pos[1:] }
+
+    for makespan in range(min_makespan, 1000):
+        
+        data['makespan'] = makespan 
         
         with open("data.dzn", "w") as _:
             pymzn.dict2dzn(data, fout='./data.dzn')
     
-        subprocess.call(["minizinc", "-c", "--solver", "gecode", "mapf.mzn", "data.dzn"])
+        # output = check_output(["minizinc", "-c", "--solver", "Gecode", "mapf.mzn", "data.dzn", "|", "minizinc", "--ozn-file", "mapf.ozn"])
+        # print(output)
+        sp = subprocess.Popen(['minizinc', '--solver', 'Gecode', 'mapf.mzn', 'data.dzn'],
+                                stdout=subprocess.PIPE,  stderr=subprocess.PIPE)
+        output = sp.stdout.read()
+        print(output)
         # TODO: check if it satisfied, then break and print solution
         # print(result["ts_pos"])
     
     # TODO: PARSE solution
-
 
 def bfs(adjs, agent):
 
