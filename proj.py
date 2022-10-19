@@ -5,6 +5,7 @@ import subprocess
 UNSAT = b"UNSATISFIABLE"
 SOLVER = 'Chuffed'
 
+
 def main(graph, scen):
 
     # read given files and assert variables
@@ -13,16 +14,17 @@ def main(graph, scen):
 
     # calculate min makespan using BFS
     makespan = calc_min_makespan(start_pos, goal_pos, adjs)
-    print("Min makespan:")
-    print(makespan)
-    print("------")
+
+    # make the timetable matrix
+    timetable = make_timetable(n_vertices, adjs)
 
     data = {'n_vertices': n_vertices,
             'n_edges': n_edges,
             'adj': adjs,
             'n_agents': n_agents,
             'start': start_pos,
-            'goal': goal_pos
+            'goal': goal_pos,
+            'timetable': timetable
             }
 
     # probably JUMP will be 1 after optimized (USAT is detected faster)
@@ -32,14 +34,15 @@ def main(graph, scen):
     while UNSAT in output and makespan < 1000:
 
         output = check_solution(SOLVER, data, makespan)
-        #print("------")
-        #print(makespan)
-        #print("------")
+        # print("------")
+        # print(makespan)
+        # print("------")
 
         makespan += JUMP
 
     output = check_lower_makespan(output, SOLVER, data, makespan - JUMP, JUMP)
     print_output(output)
+
 
 def print_output(output):
     output = "".join(chr(x) for x in output)
@@ -114,7 +117,7 @@ def bfs(adjs, start, goal):
     queue = [start]
 
     if start == goal:
-        return visited
+        return 1
 
     while queue:
         node = queue.pop(0)
@@ -123,19 +126,40 @@ def bfs(adjs, start, goal):
             for adj in adjs[node-1]:
                 if adj == goal:
                     visited.append(adj)
-                    return visited
+                    return len(visited)
                 if adj not in visited:
                     queue.append(adj)
+
+    return 0
+
+
+def make_timetable(n_vertices, adjs):
+    timetable = [-1]*n_vertices
+    for x in range(n_vertices):
+        timetable[x] = [-1] * n_vertices
+
+    for i in range(n_vertices):
+        for j in range(n_vertices):
+            res = bfs(adjs, i+1, j+1) - 1
+            print(i+1, j+1)
+            print(f"{res}")
+
+            timetable[i][j] = res
+
+    print(timetable)
+
+    return timetable
 
 
 def calc_min_makespan(start_pos, goal_pos, adjs):
     min_makespan = 2
     for start, goal in zip(start_pos, goal_pos):
-        path_size = len(bfs(adjs, start, goal))
+        path_size = bfs(adjs, start, goal)
         if path_size > min_makespan:
             min_makespan = path_size
 
     return min_makespan
+
 
 def check_solution(solver, data, makespan):
     data['makespan'] = makespan
@@ -145,9 +169,10 @@ def check_solution(solver, data, makespan):
 
     # ver aqui se devemos mudar o solver / o gui fez e ajudou
     sp = subprocess.Popen(['minizinc', '--solver', solver, 'mapf.mzn', 'data.dzn'],
-                            stdout=subprocess.PIPE,  stderr=subprocess.PIPE)
+                          stdout=subprocess.PIPE,  stderr=subprocess.PIPE)
 
     return sp.stdout.read()
+
 
 def check_lower_makespan(output, SOLVER, data, makespan, JUMP):
     lower_makespan = makespan
@@ -157,6 +182,7 @@ def check_lower_makespan(output, SOLVER, data, makespan, JUMP):
         output = check_solution(SOLVER, data, lower_makespan)
 
     return new_output
+
 
 if __name__ == '__main__':
     graph = sys.argv[1]
