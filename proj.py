@@ -29,7 +29,7 @@ def main(graph, scen):
     makespan = calc_min_makespan(start_pos, goal_pos, adjs)
 
     # make the timetable matrix
-    timetable = make_timetable(n_vertices, adjs)
+    # timetable = make_timetable(n_vertices, adjs)
 
     data = {'n_vertices': n_vertices,
             'n_edges': n_edges,
@@ -42,7 +42,7 @@ def main(graph, scen):
 
     # probably JUMP will be 1 after optimized (USAT is detected faster)
     global JUMP 
-    JUMP = round((n_vertices / n_agents)**2 + n_agents/30)
+    JUMP = round((n_agents / n_vertices)**2 * 5 + n_agents/30)
     print("JUMP:")
     print(JUMP)
 
@@ -138,7 +138,7 @@ def bfs(adjs, start, goal):
     queue = [start]
 
     if start == goal:
-        return 1
+        return []
 
     while queue:
         node = queue.pop(0)
@@ -148,7 +148,7 @@ def bfs(adjs, start, goal):
             for adj in adjs[node-1]:
                 if adj == goal:
                     visited.append(adj)
-                    return len(visited)
+                    return visited
                 if adj not in visited:
                     queue.append(adj)
     
@@ -167,12 +167,11 @@ def calc_min_vertex_dist(n_vertices, adjs):
     return d
 
 def calc_min_makespan(start_pos, goal_pos, adjs):
-    min_makespan = 2
+    min_makespan = 3
     for start, goal in zip(start_pos, goal_pos):
-        path_size = bfs(adjs, start, goal)
+        path_size = len(bfs(adjs, start, goal))
         if path_size > min_makespan:
             min_makespan = path_size
-
     return min_makespan
 
 
