@@ -29,17 +29,27 @@ constraint forall(p in 1..n_agents)(
                   ts_pos[makespan, p] = goal[p]
                  );
 
+% No repeated ts
+constraint forall(t in 1..makespan)(alldifferent(row(ts_pos, t)));
+
+% All agents in different vertex
 constraint forall(t in 1..makespan)(alldifferent([ts_pos[t, p] | p in 1..n_agents]));
 
-% possible movements           
+
+% Possible movements           
 constraint forall(t in 1..makespan-1, p in 1..n_agents)( 
                   ts_pos[t+1,p] in adj[ts_pos[t,p]]     
                                 \/
                   ts_pos[t+1,p] = ts_pos[t,p]
                   );
+                  
+% Cannot intersect another agent or go to occupied pos
+constraint forall(t in 1..makespan-1, p in 1..n_agents)(
+                  ts_pos[t+1, p] = ts_pos[t, p] 
+                              \/  
+                  not exists(a in 1..n_agents)(ts_pos[t+1,p] = ts_pos[t,a])
+                  );
 
-% No repeated time steps
-% constraint forall(t in 1..makespan)(alldifferent(row(ts_pos, t)));
 
 % if reached goal, stop at goal pos
 % constraint forall(t in 2..makespan)( 
@@ -51,11 +61,6 @@ constraint forall(t in 1..makespan-1, p in 1..n_agents)(
 % se quando numa determinada posicao ja nao for possivel 
 % chegar ao fim com o resto dos timestemps que falta, cancelar logo
 
-constraint forall(t in 1..makespan-1, p in 1..n_agents)(
-                  ts_pos[t+1, p] = ts_pos[t, p] 
-                              \/  
-                  not exists(a in 1..n_agents)(ts_pos[t+1,p] = ts_pos[t,a])
-                  );
 
 solve satisfy;
 

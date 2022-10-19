@@ -1,8 +1,45 @@
 import sys
 import pymzn
 import subprocess
-from subprocess import check_output
 
+UNSAT = b"UNSATISFIABLE"
+SOLVER = 'Chuffed'
+
+def main(graph, scen):
+
+    # read given files and assert variables
+    n_vertices, n_edges, adjs = read_graph(graph)
+    n_agents, start_pos, goal_pos = read_scen(scen)
+
+    # calculate min makespan using BFS
+    makespan = calc_min_makespan(start_pos, goal_pos, adjs)
+    print("Min makespan:")
+    print(makespan)
+    print("------")
+
+    data = {'n_vertices': n_vertices,
+            'n_edges': n_edges,
+            'adj': adjs,
+            'n_agents': n_agents,
+            'start': start_pos,
+            'goal': goal_pos
+            }
+
+    # probably JUMP will be 1 after optimized (USAT is detected faster)
+    JUMP = round(n_agents / n_vertices * 3)
+
+    output = UNSAT
+    while UNSAT in output and makespan < 1000:
+
+        output = check_solution(SOLVER, data, makespan)
+        #print("------")
+        #print(makespan)
+        #print("------")
+
+        makespan += JUMP
+
+    output = check_lower_makespan(output, SOLVER, data, makespan - JUMP, JUMP)
+    print_output(output)
 
 def print_output(output):
     output = "".join(chr(x) for x in output)
@@ -50,10 +87,10 @@ def read_scen(scen):
         n_agents = int(skip_comments(input_scen))
 
         # handle START
+        _ = skip_comments(input_scen)
         line = skip_comments(input_scen)
 
         start_pos = [None] * n_agents
-        line = skip_comments(input_scen)
         while line and "GOAL" not in line:
             i, a = line.strip().split()
             start_pos[int(i) - 1] = int(a)
@@ -91,7 +128,7 @@ def bfs(adjs, start, goal):
                     queue.append(adj)
 
 
-def calc_minspan(start_pos, goal_pos, adjs):
+def calc_min_makespan(start_pos, goal_pos, adjs):
     min_makespan = 2
     for start, goal in zip(start_pos, goal_pos):
         path_size = len(bfs(adjs, start, goal))
@@ -100,52 +137,26 @@ def calc_minspan(start_pos, goal_pos, adjs):
 
     return min_makespan
 
+def check_solution(solver, data, makespan):
+    data['makespan'] = makespan
 
-def main(graph, scen):
+    with open("data.dzn", "w") as _:
+        pymzn.dict2dzn(data, fout='./data.dzn')
 
-    n_vertices, n_edges, adjs = read_graph(graph)
-    # print(n_vertices)
-    # print(n_edges)
-    # print(edges)
-    # print(adjs)
+    # ver aqui se devemos mudar o solver / o gui fez e ajudou
+    sp = subprocess.Popen(['minizinc', '--solver', solver, 'mapf.mzn', 'data.dzn'],
+                            stdout=subprocess.PIPE,  stderr=subprocess.PIPE)
 
-    n_agents, start_pos, goal_pos = read_scen(scen)
-    # print("$$$$$$")
-    # print(start_pos)
-    # print(goal_pos)
-    # print("$$$$$$")
-    # print(n_agents)
-    # print(agents)
+    return sp.stdout.read()
 
-    # calculate min makespan using BFS
-    makespan = calc_minspan(start_pos, goal_pos, adjs)
+def check_lower_makespan(output, SOLVER, data, makespan, JUMP):
+    lower_makespan = makespan
+    while UNSAT not in output and lower_makespan > makespan - JUMP:
+        new_output = output
+        lower_makespan -= 1
+        output = check_solution(SOLVER, data, lower_makespan)
 
-    data = {'n_vertices': n_vertices,
-            'n_edges': n_edges,
-            'adj': adjs,
-            'n_agents': n_agents,
-            'start': start_pos,
-            'goal': goal_pos
-            }
-
-    output = b"UNSATISFIABLE"
-    while b"UNSATISFIABLE" in output and makespan < 100:
-
-        data['makespan'] = makespan
-
-        with open("data.dzn", "w") as _:
-            pymzn.dict2dzn(data, fout='./data.dzn')
-
-        # ver aqui se devemos mudar o solver / o gui fez e ajudou
-        sp = subprocess.Popen(['minizinc', '--solver', 'Gecode', 'mapf.mzn', 'data.dzn'],
-                              stdout=subprocess.PIPE,  stderr=subprocess.PIPE)
-
-        output = sp.stdout.read()
-
-        makespan += 1
-
-    print_output(output)
-
+    return new_output
 
 if __name__ == '__main__':
     graph = sys.argv[1]
