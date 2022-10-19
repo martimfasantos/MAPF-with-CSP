@@ -20,7 +20,6 @@ array[1..n_agents] of 1..n_vertices: goal;
 % position of each agent in a timestamp e.g. t0 = [agent1_pos, agent2_pos, agent3_pos]
 array[1..makespan, 1..n_agents] of var 1..n_vertices: ts_pos;
 
-
 %-----------------------------------------
 
 include "alldifferent.mzn";
