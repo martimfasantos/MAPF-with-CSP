@@ -10,6 +10,7 @@ int: makespan;
 int: n_vertices;
 int: n_edges;
 array[1..n_vertices] of set of 1..n_vertices: adj;
+array[1..n_vertices, 1..n_vertices] of 0..n_edges+1: min_d;
 
 % Agents
 int: n_agents;
@@ -18,6 +19,7 @@ array[1..n_agents] of 1..n_vertices: goal;
 
 % position of each agent in a timestamp e.g. t0 = [agent1_pos, agent2_pos, agent3_pos]
 array[1..makespan, 1..n_agents] of var 1..n_vertices: ts_pos;
+
 
 %-----------------------------------------
 
@@ -29,12 +31,14 @@ constraint forall(p in 1..n_agents)(
                   ts_pos[makespan, p] = goal[p]
                  );
 
+% Still possible to reach goal of every vertex
+constraint forall(t in 1..makespan, p in 1..n_agents)(makespan-t >= min_d[ts_pos[t,p], goal[p]]);
+
 % No repeated ts
 constraint forall(t in 1..makespan)(alldifferent(row(ts_pos, t)));
 
 % All agents in different vertex
 constraint forall(t in 1..makespan)(alldifferent([ts_pos[t, p] | p in 1..n_agents]));
-
 
 % Possible movements           
 constraint forall(t in 1..makespan-1, p in 1..n_agents)( 

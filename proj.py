@@ -1,15 +1,28 @@
 import sys
+from tracemalloc import start
 import pymzn
 import subprocess
 
 UNSAT = b"UNSATISFIABLE"
-SOLVER = 'Chuffed'
+SOLVER = 'Chuffed' # Chuffed / Gecode
 
 def main(graph, scen):
 
     # read given files and assert variables
     n_vertices, n_edges, adjs = read_graph(graph)
     n_agents, start_pos, goal_pos = read_scen(scen)
+
+    global INF
+    INF = n_edges+1
+
+    print(n_vertices)
+    print("--------")
+    for i in range(len(adjs)):
+        print(f"{i+1}: {adjs[i]}")
+
+    # calculate every min distance using BFS
+    min_d = calc_min_vertex_dist(n_vertices, adjs)
+    print(min_d)
 
     # calculate min makespan using BFS
     makespan = calc_min_makespan(start_pos, goal_pos, adjs)
@@ -22,35 +35,44 @@ def main(graph, scen):
             'adj': adjs,
             'n_agents': n_agents,
             'start': start_pos,
-            'goal': goal_pos
+            'goal': goal_pos,
+            'min_d': min_d
             }
 
     # probably JUMP will be 1 after optimized (USAT is detected faster)
-    JUMP = round(n_agents / n_vertices * 3)
+    global JUMP 
+    JUMP = round((n_vertices / n_agents)**2 + n_agents/30)
+    print("JUMP:")
+    print(JUMP)
 
     output = UNSAT
+    if n_agents > 10:
+        global SOLVER
+        SOLVER = 'Gecode'
+    
+    print(SOLVER)
     while UNSAT in output and makespan < 1000:
 
         output = check_solution(SOLVER, data, makespan)
-        #print("------")
-        #print(makespan)
-        #print("------")
+        print("------")
+        print(makespan)
+        print("------")
 
         makespan += JUMP
 
-    output = check_lower_makespan(output, SOLVER, data, makespan - JUMP, JUMP)
+    output = check_lower_makespan(output, SOLVER, data, makespan - JUMP)
     print_output(output)
 
 def print_output(output):
     output = "".join(chr(x) for x in output)
     output = output.split("\n")[1:-3]
+    print(output)
     for i, o in enumerate(output):
         o = o[3:].split(", ")
 
         print(f"i={i} ", end="")
         for j, a in enumerate(o):
-            print(f"{j+1}:{a} ", end="")
-
+            print(f"{j+1}:{a.strip()} ", end="")
         print()
 
 
@@ -119,14 +141,28 @@ def bfs(adjs, start, goal):
     while queue:
         node = queue.pop(0)
         if node not in visited:
-            visited.append(node)
+            if node != start:
+                visited.append(node)
             for adj in adjs[node-1]:
                 if adj == goal:
                     visited.append(adj)
                     return visited
                 if adj not in visited:
                     queue.append(adj)
+    
 
+def calc_min_vertex_dist(n_vertices, adjs):
+    d = [[INF] * n_vertices for _ in range(n_vertices)]
+    print("LEN:")
+    print(len(d))
+    for vertex1 in range(1, n_vertices+1):
+        for vertex2 in range(1, vertex1+1):
+            path = bfs(adjs, vertex1, vertex2)
+            if path != None:
+                d[vertex1-1][vertex2-1] = \
+                d[vertex2-1][vertex1-1] = len(path)
+        print(f"{vertex1}: {d[vertex1-1]}")
+    return d
 
 def calc_min_makespan(start_pos, goal_pos, adjs):
     min_makespan = 2
@@ -143,13 +179,13 @@ def check_solution(solver, data, makespan):
     with open("data.dzn", "w") as _:
         pymzn.dict2dzn(data, fout='./data.dzn')
 
-    # ver aqui se devemos mudar o solver / o gui fez e ajudou
+    # change solver?
     sp = subprocess.Popen(['minizinc', '--solver', solver, 'mapf.mzn', 'data.dzn'],
                             stdout=subprocess.PIPE,  stderr=subprocess.PIPE)
 
     return sp.stdout.read()
 
-def check_lower_makespan(output, SOLVER, data, makespan, JUMP):
+def check_lower_makespan(output, SOLVER, data, makespan):
     lower_makespan = makespan
     while UNSAT not in output and lower_makespan > makespan - JUMP:
         new_output = output
