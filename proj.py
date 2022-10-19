@@ -4,7 +4,7 @@ import pymzn
 import subprocess
 
 UNSAT = b"UNSATISFIABLE"
-SOLVER = 'Chuffed' # Chuffed / Gecode
+SOLVER = 'Chuffed'  # Chuffed / Gecode
 
 
 def main(graph, scen):
@@ -37,7 +37,7 @@ def main(graph, scen):
             }
 
     # probably JUMP will be 1 after optimized (USAT is detected faster)
-    global JUMP 
+    global JUMP
     JUMP = min(round(max((n_agents / n_vertices)**2 * 5, 1) + n_agents/20), 3)
     print("JUMP:")
     print(JUMP)
@@ -46,7 +46,7 @@ def main(graph, scen):
     if n_agents > 12:
         global SOLVER
         SOLVER = 'Gecode'
-    
+
     # print(SOLVER)
     while UNSAT in output and makespan < 1000:
 
@@ -146,10 +146,11 @@ def bfs(adjs, start, goal):
                     return visited
                 if adj not in visited:
                     queue.append(adj)
-    
+
 
 def calc_min_vertex_dist(n_vertices, adjs, goal_pos):
-    d = {vertex : [-1] * n_vertices for vertex in range(1, n_vertices+1)}
+    d = [[-1] * n_vertices for _ in range(1, n_vertices+1)]
+
     for goal in goal_pos:
         for vertex in range(1, n_vertices+1):
             path = bfs(adjs, goal, vertex)
@@ -157,15 +158,18 @@ def calc_min_vertex_dist(n_vertices, adjs, goal_pos):
                 path_length = len(path)
             else:
                 path_length = INF
-            d[goal][vertex-1] = path_length
+            d[goal-1][vertex-1] = path_length
+
     return d
+
 
 def calc_min_makespan(start_pos, goal_pos, min_d):
     min_makespan = 2
     for s, g in zip(start_pos, goal_pos):
-        if min_d[g][s-1] > min_makespan:
-            min_makespan = min_d[g][s-1]
+        if min_d[g-1][s-1] > min_makespan:
+            min_makespan = min_d[g-1][s-1]
     return min_makespan
+
 
 def check_solution(solver, data, makespan):
     data['makespan'] = makespan
@@ -179,7 +183,9 @@ def check_solution(solver, data, makespan):
 
     return sp.stdout.read()
 
+
 def check_lower_makespan(output, SOLVER, data, makespan):
+
     lower_makespan = makespan
     while UNSAT not in output and lower_makespan > makespan - JUMP:
         new_output = output
