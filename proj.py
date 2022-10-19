@@ -16,17 +16,13 @@ def main(graph, scen):
     global INF
     INF = n_edges+1
 
-    print(n_vertices)
-    print("--------")
-    for i in range(len(adjs)):
-        print(f"{i+1}: {adjs[i]}")
-
     # calculate every min distance using BFS
-    min_d = calc_min_vertex_dist(n_vertices, adjs)
+    min_d = calc_min_vertex_dist(n_vertices, adjs, goal_pos)
+
     print(min_d)
 
     # calculate min makespan using BFS
-    makespan = calc_min_makespan(start_pos, goal_pos, adjs)
+    makespan = calc_min_makespan(start_pos, goal_pos, min_d)
 
     # make the timetable matrix
     # timetable = make_timetable(n_vertices, adjs)
@@ -42,16 +38,16 @@ def main(graph, scen):
 
     # probably JUMP will be 1 after optimized (USAT is detected faster)
     global JUMP 
-    JUMP = round((n_agents / n_vertices)**2 * 5 + n_agents/10)
+    JUMP = min(round(max((n_agents / n_vertices)**2 * 5, 1) + n_agents/20), 3)
     print("JUMP:")
     print(JUMP)
 
     output = UNSAT
-    if n_agents > 10:
+    if n_agents > 12:
         global SOLVER
         SOLVER = 'Gecode'
     
-    print(SOLVER)
+    # print(SOLVER)
     while UNSAT in output and makespan < 1000:
 
         output = check_solution(SOLVER, data, makespan)
@@ -68,7 +64,6 @@ def main(graph, scen):
 def print_output(output):
     output = "".join(chr(x) for x in output)
     output = output.split("\n")[1:-3]
-    print(output)
     for i, o in enumerate(output):
         o = o[3:].split(", ")
 
@@ -153,27 +148,24 @@ def bfs(adjs, start, goal):
                     queue.append(adj)
     
 
-def calc_min_vertex_dist(n_vertices, adjs):
-    d = [[INF] * n_vertices for _ in range(n_vertices)]
-    print("LEN:")
-    print(len(d))
-    for vertex1 in range(1, n_vertices+1):
-        for vertex2 in range(1, vertex1+1):
-            path = bfs(adjs, vertex1, vertex2)
+def calc_min_vertex_dist(n_vertices, adjs, goal_pos):
+    d = {vertex : [-1] * n_vertices for vertex in range(1, n_vertices+1)}
+    for goal in goal_pos:
+        for vertex in range(1, n_vertices+1):
+            path = bfs(adjs, goal, vertex)
             if path != None:
-                d[vertex1-1][vertex2-1] = \
-                d[vertex2-1][vertex1-1] = len(path)
-        print(f"{vertex1}: {d[vertex1-1]}")
+                path_length = len(path)
+            else:
+                path_length = INF
+            d[goal][vertex-1] = path_length
     return d
 
-def calc_min_makespan(start_pos, goal_pos, adjs):
-    min_makespan = 3
-    for start, goal in zip(start_pos, goal_pos):
-        path_size = len(bfs(adjs, start, goal))
-        if path_size > min_makespan:
-            min_makespan = path_size
+def calc_min_makespan(start_pos, goal_pos, min_d):
+    min_makespan = 2
+    for s, g in zip(start_pos, goal_pos):
+        if min_d[g][s-1] > min_makespan:
+            min_makespan = min_d[g][s-1]
     return min_makespan
-
 
 def check_solution(solver, data, makespan):
     data['makespan'] = makespan
