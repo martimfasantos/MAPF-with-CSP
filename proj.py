@@ -42,7 +42,7 @@ def main(graph, scen):
 
     # probably JUMP will be 1 after optimized (USAT is detected faster)
     global JUMP 
-    JUMP = round((n_agents / n_vertices)**2 * 5 + n_agents/30)
+    JUMP = round((n_agents / n_vertices)**2 * 5 + n_agents/10)
     print("JUMP:")
     print(JUMP)
 
