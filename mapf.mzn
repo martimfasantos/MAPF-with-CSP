@@ -33,7 +33,7 @@ constraint forall(p in 1..n_agents)(
                  );
 
 % Still possible to reach goal of every vertex
-constraint forall(t in 1..makespan, p in 1..n_agents)(makespan-t >= min_d[p, ts_pos[t,p]] );
+constraint forall(t in 1..makespan, p in 1..n_agents)(makespan-min_d[p, ts_pos[t,p]] >= t );
 
 % function var int: count(array [int] of var int: x, var int: y)
 constraint forall (t in 1..makespan-1, p in 1..n_agents)(count(row(ts_pos, t), ts_pos[t+1, p]) <= 1);

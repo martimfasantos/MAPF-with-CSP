@@ -152,11 +152,14 @@ def bfs(adjs, start, goal):
                     queue.append(adj)
 
 
-def weighted_bfs(d, goal, adjs, makespan):
+def weighted_bfs(d, targets, adjs, makespan):
+    goal, start = targets
+
     dist = 0
     q = [goal]
     aux_q = []
 
+    makespan = 2
     # bfs marosca com tagging
     while q != []:
         # checkar distancia dos adjacentes
@@ -167,20 +170,23 @@ def weighted_bfs(d, goal, adjs, makespan):
             aux_q += adjs[v-1]
             d[v-1] = dist
 
+            if v == start:
+                makespan = max(makespan, dist)
+
         if q == []:
             dist += 1
             q = aux_q
             aux_q = []
 
-    return max(makespan, dist)
+    return makespan
 
 
 def calc_min_vertex_dist(n_vertices, adjs, goal_pos, start_pos):
     d = [[-1] * n_vertices for _ in range(len(goal_pos))]
 
     makespan = 2
-    for i, goal in enumerate(goal_pos):
-        makespan = weighted_bfs(d[i], goal, adjs, makespan)
+    for i, targets in enumerate(zip(goal_pos, start_pos)):
+        makespan = max(makespan, weighted_bfs(d[i], targets, adjs, makespan))
 
     return d, makespan
 
