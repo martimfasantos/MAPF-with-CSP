@@ -2,13 +2,10 @@ import sys
 from tracemalloc import start
 import pymzn
 import subprocess
-# from leafy.graph import Graph
-# import nx
+
 
 UNSAT = b"UNSATISFIABLE"
 SOLVER = 'Chuffed'  # Chuffed / Gecode
-
-
 
 def main(graph, scen):
 
@@ -46,7 +43,7 @@ def main(graph, scen):
     print(JUMP)
 
     output = UNSAT
-    if n_agents > 12:
+    if n_vertices > 200:
         global SOLVER
         SOLVER = 'Gecode'
 
