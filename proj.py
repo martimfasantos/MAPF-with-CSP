@@ -2,8 +2,7 @@ import sys
 from tracemalloc import start
 import pymzn
 import subprocess
-# from leafy.graph import Graph
-# import nx
+
 
 UNSAT = b"UNSATISFIABLE"
 ERROR = b"ERROR"
@@ -45,9 +44,10 @@ def main(graph, scen):
     print("JUMP:")
     print(JUMP)
 
-    # if n_agents > 12:
-    #     global SOLVER
-    #     # SOLVER = 'Gecode'
+    output = UNSAT
+    if n_vertices > 200:
+        global SOLVER
+        SOLVER = 'Gecode'
 
     # print(SOLVER)
     output = UNSAT
