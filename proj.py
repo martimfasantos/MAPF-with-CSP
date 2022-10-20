@@ -61,7 +61,6 @@ def main(graph, scen):
         makespan += JUMP
 
     # output = check_lower_makespan(output, SOLVER, data, makespan - JUMP)
-    print(output)
     print_output(output)
 
 
@@ -164,9 +163,9 @@ def weighted_bfs(d, goal, adjs, makespan):
         v = q.pop()
 
         # se nao tiver sido visitado
-        if d[goal-1][v-1] == -1:
+        if d[v-1] == -1:
             aux_q += adjs[v-1]
-            d[goal-1][v-1] = dist
+            d[v-1] = dist
 
         if q == []:
             dist += 1
@@ -177,23 +176,11 @@ def weighted_bfs(d, goal, adjs, makespan):
 
 
 def calc_min_vertex_dist(n_vertices, adjs, goal_pos, start_pos):
-    d = [[-1] * n_vertices for _ in range(1, n_vertices+1)]
+    d = [[-1] * n_vertices for _ in range(len(goal_pos))]
 
     makespan = 2
-    for goal, start in zip(goal_pos, start_pos):
-        makespan = weighted_bfs(d, goal, adjs, makespan)
-
-        # for vertex in range(1, n_vertices+1):
-        #     path = bfs(adjs, goal, vertex)
-        #     # path = nx.shortest_path()
-        #     if path != None:
-        #         path_length = len(path)
-
-        #         if vertex == start:
-        #             makespan = max(makespan, path_length)
-        #     else:
-        #         path_length = INF
-        #     d[goal-1][vertex-1] = path_length
+    for i, goal in enumerate(goal_pos):
+        makespan = weighted_bfs(d[i], goal, adjs, makespan)
 
     return d, makespan
 

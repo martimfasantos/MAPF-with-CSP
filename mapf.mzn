@@ -17,7 +17,7 @@ array[VERTICES] of set of VERTICES: adj;
 int: n_agents;
 array[1..n_agents] of VERTICES: start;
 array[1..n_agents] of VERTICES: goal;
-array[VERTICES, VERTICES] of DISTANCES: min_d;
+array[1..n_agents, VERTICES] of DISTANCES: min_d;
 
 % position of each agent in a timestamp e.g. t0 = [agent1_pos, agent2_pos, agent3_pos]
 array[1..makespan, 1..n_agents] of var VERTICES: ts_pos;
@@ -33,7 +33,7 @@ constraint forall(p in 1..n_agents)(
                  );
 
 % Still possible to reach goal of every vertex
-constraint forall(t in 1..makespan, p in 1..n_agents)(makespan-t >= min_d[goal[p], ts_pos[t,p]] );
+constraint forall(t in 1..makespan, p in 1..n_agents)(makespan-t >= min_d[p, ts_pos[t,p]] );
 
 % function var int: count(array [int] of var int: x, var int: y)
 constraint forall (t in 1..makespan-1, p in 1..n_agents)(count(row(ts_pos, t), ts_pos[t+1, p]) <= 1);
