@@ -2,9 +2,12 @@ import sys
 from tracemalloc import start
 import pymzn
 import subprocess
+# from leafy.graph import Graph
+# import nx
 
 UNSAT = b"UNSATISFIABLE"
 SOLVER = 'Chuffed'  # Chuffed / Gecode
+
 
 
 def main(graph, scen):
@@ -154,6 +157,7 @@ def calc_min_vertex_dist(n_vertices, adjs, goal_pos):
     for goal in goal_pos:
         for vertex in range(1, n_vertices+1):
             path = bfs(adjs, goal, vertex)
+            # path = nx.shortest_path()
             if path != None:
                 path_length = len(path)
             else:

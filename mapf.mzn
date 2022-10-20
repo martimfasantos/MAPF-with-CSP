@@ -30,25 +30,24 @@ constraint forall(p in 1..n_agents)(
                   ts_pos[makespan, p] = goal[p]
                  );
 
-% *REGRA IMPORTANTE:* 
-% se quando numa determinada posicao ja nao for possivel 
-% chegar ao fim com o resto dos timestemps que falta, cancelar logo
-
 % Still possible to reach goal of every vertex
 constraint forall(t in 1..makespan, p in 1..n_agents)(makespan-t >= min_d[goal[p], ts_pos[t,p]] );
 
-% No repeated ts
-constraint forall(t in 1..makespan)(alldifferent(row(ts_pos, t)));
-
 % All agents in different vertex
 constraint forall(t in 1..makespan)(alldifferent([ts_pos[t, p] | p in 1..n_agents]));
+
+% 
+constraint forall (t in 1..n_agents, p in 1..n_agents, a in 1..n_agents)(if (a != p) then ts_pos[t+1,p] != ts_pos[t,a] endif);
+
+% No repeated ts
+constraint forall(t in 1..makespan)(alldifferent(row(ts_pos, t)));
 
 % Possible movements           
 constraint forall(t in 1..makespan-1, p in 1..n_agents)(
                     ts_pos[t+1,p] in adj[ts_pos[t,p]]     
                                 \/
-                    ts_pos[t+1,p] = ts_pos[t,p])
-                  ;
+                    ts_pos[t+1,p] = ts_pos[t,p]
+                  );
                   
 % Cannot intersect another agent or go to occupied pos
 constraint forall(t in 1..makespan-1, p in 1..n_agents)(
@@ -57,7 +56,6 @@ constraint forall(t in 1..makespan-1, p in 1..n_agents)(
                   not exists(a in 1..n_agents)(ts_pos[t+1,p] = ts_pos[t,a])
                   );
 
-
-solve satisfy;
-
-%output ["The resulting values are \(ts_pos).\n"];
+% int_search(ts_pos, dom_w_deg, indomain_min)
+solve :: int_search(ts_pos, input_order, indomain_min)
+      satisfy;
