@@ -8,6 +8,7 @@ UNSAT = b"UNSATISFIABLE"
 ERROR = b"ERROR"
 SOLVER = 'Chuffed'  # Chuffed / Gecode
 
+# ----------------------------------------------------------------
 
 def main(graph, scen):
 
@@ -20,13 +21,7 @@ def main(graph, scen):
 
     # calculate every min distance using BFS
     min_d, makespan = calc_min_vertex_dist(
-        n_vertices, adjs, goal_pos, start_pos)
-
-    # calculate min makespan using BFS
-    # makespan = calc_min_makespan(start_pos, goal_pos, min_d)
-
-    # make the timetable matrix
-    # timetable = make_timetable(n_vertices, adjs)
+        n_vertices, n_agents, adjs, goal_pos, start_pos)
 
     data = {
         'n_vertices': n_vertices,
@@ -38,30 +33,23 @@ def main(graph, scen):
         'min_d': min_d
     }
 
-    # probably JUMP will be 1 after optimized (USAT is detected faster)
     global JUMP
-    JUMP = min(round(max((n_agents / n_vertices)**2 * 5, 1) + n_agents/20), 3)
-    print("JUMP:")
-    print(JUMP)
+    JUMP = 2+n_vertices//1000
 
     output = UNSAT
-    if n_vertices > 1000:
-        global SOLVER
-        SOLVER = 'Gecode'
-
-    # print(SOLVER)
-    output = UNSAT
-    # while UNSAT in output and makespan < 1000:
     while (UNSAT in output or ERROR in output) and makespan < 1000:
-        print("------")
-        print(makespan)
-        print("------")
-        output = check_solution(SOLVER, data, makespan)
+        output = check_solution(data, makespan)
 
         makespan += JUMP
 
+    # check previous makespans if solution is found
+    output = check_lower_makespan(output, data, makespan - JUMP)
+
+    # print result
     print_output(output)
 
+
+# --------------------------------------------------------------------
 
 def print_output(output):
     output = "".join(chr(x) for x in output)
@@ -101,11 +89,9 @@ def read_graph(graph):
 
             line = skip_comments(input_graph)
     
-    # for i in range(len(adjs)):
-    #     if len(adjs[i]) == 0:
-    #         print(adjs[i])
-    #         adjs[i] = {}
-
+    for i in range(len(adjs)):
+        if len(adjs[i]) == 0:
+            adjs[i] = "{}"
 
     return n_vertices, n_edges, adjs
 
@@ -137,6 +123,7 @@ def read_scen(scen):
         return n_agents, start_pos, goal_pos
 
 
+# NOT USED
 def bfs(adjs, start, goal):
     visited = []
     queue = [start]
@@ -165,12 +152,11 @@ def weighted_bfs(d, targets, adjs, makespan):
     aux_q = []
 
     makespan = 2
-    # bfs marosca com tagging
     while q != []:
-        # checkar distancia dos adjacentes
+        # check adjs distances
         v = q.pop()
 
-        # se nao tiver sido visitado
+        # if not visited
         if d[v-1] == -1:
             aux_q += adjs[v-1]
             d[v-1] = dist
@@ -186,16 +172,21 @@ def weighted_bfs(d, targets, adjs, makespan):
     return makespan
 
 
-def calc_min_vertex_dist(n_vertices, adjs, goal_pos, start_pos):
-    d = [[-1] * n_vertices for _ in range(len(goal_pos))]
+def calc_min_vertex_dist(n_vertices, n_agents, adjs, goal_pos, start_pos):
+    d = [[-1] * n_vertices for _ in range(n_agents)]
 
     makespan = 2
     for i, targets in enumerate(zip(goal_pos, start_pos)):
         makespan = max(makespan, weighted_bfs(d[i], targets, adjs, makespan))
 
+    # for big puzzles in which you can only make 1 move per timestamp
+    if n_vertices >= 3**2 and n_vertices - n_agents == 1:
+        makespan = sum([d[goal_pos[i]-1][start_pos[i]-1] for i in range(n_agents)])-1
+
     return d, makespan
 
 
+# NOT USED
 def calc_min_makespan(start_pos, goal_pos, min_d):
     min_makespan = 2
     for s, g in zip(start_pos, goal_pos):
@@ -204,28 +195,31 @@ def calc_min_makespan(start_pos, goal_pos, min_d):
     return min_makespan
 
 
-def check_solution(solver, data, makespan):
+def check_solution(data, makespan):
     data['makespan'] = makespan
 
     with open("data.dzn", "w") as _:
         pymzn.dict2dzn(data, fout='./data.dzn')
 
-    # change solver?
-    sp = subprocess.Popen(['minizinc', '--solver', solver, 'mapf.mzn', 'data.dzn'],
+    sp = subprocess.Popen(['minizinc', '--solver', SOLVER, 'mapf.mzn', 'data.dzn'],
                           stdout=subprocess.PIPE,  stderr=subprocess.PIPE)
 
     return sp.stdout.read()
 
 
-def check_lower_makespan(output, SOLVER, data, makespan):
+def check_lower_makespan(output, data, makespan):
 
-    lower_makespan = makespan
-    while UNSAT not in output and lower_makespan > makespan - JUMP:
-        new_output = output
+    lower_makespan = makespan-1
+    solution = output
+    while lower_makespan > makespan - JUMP:
+        output = check_solution(data, lower_makespan)
+        if UNSAT in output:
+            return solution
+        else:
+            solution = output
         lower_makespan -= 1
-        output = check_solution(SOLVER, data, lower_makespan)
 
-    return new_output
+    return solution
 
 
 if __name__ == '__main__':
