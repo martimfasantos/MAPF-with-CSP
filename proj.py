@@ -45,7 +45,7 @@ def main(graph, scen):
     print(JUMP)
 
     output = UNSAT
-    if n_vertices > 200:
+    if n_vertices > 1000:
         global SOLVER
         SOLVER = 'Gecode'
 
@@ -60,7 +60,6 @@ def main(graph, scen):
 
         makespan += JUMP
 
-    # output = check_lower_makespan(output, SOLVER, data, makespan - JUMP)
     print_output(output)
 
 
@@ -101,6 +100,12 @@ def read_graph(graph):
             adjs[edge[1]-1].add(edge[0])
 
             line = skip_comments(input_graph)
+    
+    # for i in range(len(adjs)):
+    #     if len(adjs[i]) == 0:
+    #         print(adjs[i])
+    #         adjs[i] = {}
+
 
     return n_vertices, n_edges, adjs
 
